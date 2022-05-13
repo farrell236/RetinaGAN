@@ -3,15 +3,15 @@
 Download checkpoint zips and extract them to this folder.
 
 Required for running RetinaGAN `run_pipeline.py` and `web_demo.py`:
-- [cstylegan.zip](https://www.doc.ic.ac.uk/~bh1511/research/RetinaGAN/cstylegan.zip) 
+- [cstylegan.zip](https://xxx/research/RetinaGAN/cstylegan.zip) 
 <br> Size: 561M <br> MD5: `ded1e6adf3942621a23e7b0fd8291e18`
-- [gaugan.zip](https://www.doc.ic.ac.uk/~bh1511/research/RetinaGAN/gaugan.zip) 
+- [gaugan.zip](https://xxx/research/RetinaGAN/gaugan.zip) 
 <br> Size: 625M <br> MD5: `ed1e4d313fb6ddff416f42a7fa782d6f`
 
 Optional checkpoints for downstream tasks:
-- [segmentation.zip](https://www.doc.ic.ac.uk/~bh1511/research/RetinaGAN/segmentation.zip) 
+- [segmentation.zip](https://xxx/research/RetinaGAN/segmentation.zip) 
 <br> Size: 1.1G <br> MD5: `7a842f561ffe7c3060024dc822a41671`
-- [classification.zip](https://www.doc.ic.ac.uk/~bh1511/research/RetinaGAN/classification.zip) 
+- [classification.zip](https://xxx/research/RetinaGAN/classification.zip) 
 <br> Size: 7.5G <br> MD5: `b247713b37284b975b4edec73ee12a75`
 
 ```
