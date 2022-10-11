@@ -1,7 +1,7 @@
 import os
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'   # see issue #152
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
 import math
 
 import numpy as np
@@ -13,7 +13,7 @@ from utils import onehot_to_rgb, color_dict
 from patient_ids import patient_ids
 
 
-root_dir = '/data/datasets/retina/FGADR/Seg-set/'
+root_dir = '/vol/biomedic3/bh1511/retina/FGADR/Seg-set/'
 test_ids = patient_ids[1400:]
 
 ##### Tensorflow Dataloader ############################################################################################
@@ -40,43 +40,10 @@ def resize(image, label, height=IMG_HEIGHT, width=IMG_WIDTH):
     return image, label
 
 
-def random_rotate(image, label):
-    degree = tf.random.normal([]) * 360
-    image = tfa.image.rotate(image, degree * math.pi / 180., interpolation='nearest')
-    label = tfa.image.rotate(label, degree * math.pi / 180., interpolation='nearest')
-    return image, label
-
-
 def normalize(image, label):
     # normalizing the images to [-1, 1]
     image = tf.image.convert_image_dtype(image, tf.float32)
     label = tf.one_hot(label[..., 0], depth=7)  # , dtype=tf.uint8)
-    return image, label
-
-
-@tf.function()
-def random_jitter(image, label):
-    # resizing to 286 x 286 x 3
-    image, label = resize(image, label)
-
-    # Random rotate
-    image, label = random_rotate(image, label)
-
-    # randomly cropping to 256 x 256 x 3
-
-    if tf.random.uniform(()) > 0.5:
-        # random mirroring
-        image = tf.image.flip_left_right(image)
-        label = tf.image.flip_left_right(label)
-
-    return image, label
-
-
-def load_image_train(image_file):
-    image, label = load(image_file)
-    image, label = random_jitter(image, label)
-    image, label = normalize(image, label)
-
     return image, label
 
 
@@ -95,9 +62,9 @@ test_dataset = test_dataset.batch(1)
 
 ##### Network Definition ###############################################################################################
 
-model = tf.keras.models.load_model('../checkpoints/segmentation/unet_real.tf')
-# model = tf.keras.models.load_model('../checkpoints/segmentation/unet_fake.tf')
-# model = tf.keras.models.load_model('../checkpoints/segmentation/unet_fine.tf')
+# model = tf.keras.models.load_model('checkpoints/segmentation/unet_real.tf', compile=False)
+# model = tf.keras.models.load_model('checkpoints/segmentation/unet_fake.tf', compile=False)
+model = tf.keras.models.load_model('checkpoints/segmentation/unet_fine2.tf', compile=False)
 
 
 def dice_coef(y_true, y_pred, eps=1e-5):
@@ -113,13 +80,13 @@ for idx, (image, label) in enumerate(test_dataset):
     y_true = label.numpy()
 
     s = [
-        dice_coef(y_true[..., 0], y_pred[..., 0]),  # BG
+        # dice_coef(y_true[..., 0], y_pred[..., 0]),  # BG
         dice_coef(y_true[..., 1], y_pred[..., 1]),  # EX
         dice_coef(y_true[..., 2], y_pred[..., 2]),  # HE
         dice_coef(y_true[..., 3], y_pred[..., 3]),  # SE
         dice_coef(y_true[..., 4], y_pred[..., 4]),  # MA
         dice_coef(y_true[..., 5], y_pred[..., 5]),  # OD
-        dice_coef(y_true[..., 6], y_pred[..., 6]),  # VB
+        # dice_coef(y_true[..., 6], y_pred[..., 6]),  # VB
     ]
     print(f'{idx}: {np.round(s, 5)}')
     scores.append(s)

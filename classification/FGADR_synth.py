@@ -13,6 +13,7 @@ import tensorflow_addons as tfa
 from sklearn.model_selection import KFold
 
 
+
 import wandb
 from wandb.keras import WandbCallback
 wandb.login()
@@ -107,33 +108,33 @@ for idx, (train_index, test_index) in enumerate(kf.split(train_val_df)):
 
     ##### Network Definition ###############################################################################################
 
-    # Create a MirroredStrategy.
-    strategy = tf.distribute.MirroredStrategy()
-    print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+    # # Create a MirroredStrategy.
+    # strategy = tf.distribute.MirroredStrategy()
+    # print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+    #
+    # # Open a strategy scope.
+    # with strategy.scope():
+    #     # Everything that creates variables should be under the strategy scope.
+    #     # In general this is only model construction & `compile()`.
 
-    # Open a strategy scope.
-    with strategy.scope():
-        # Everything that creates variables should be under the strategy scope.
-        # In general this is only model construction & `compile()`.
-
-        model = tf.keras.Sequential([
-            tf.keras.applications.InceptionResNetV2(include_top=False, weights=None, pooling='avg'),
-            tf.keras.layers.Dense(5)
-        ])
+    model = tf.keras.Sequential([
+        tf.keras.applications.InceptionResNetV2(include_top=False, weights=None, pooling='avg'),
+        tf.keras.layers.Dense(5)
+    ])
 
 
 
-        model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-            metrics=['sparse_categorical_accuracy']
-        )
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy']
+    )
 
     csv_logger = tf.keras.callbacks.CSVLogger(f'CI/InceptionResNetV2_{idx}_fake.log')
 
     checkpoint = tf.keras.callbacks.ModelCheckpoint(
         filepath=f'CI/InceptionResNetV2_{idx}_fake.tf',
-        monitor='val_sparse_categorical_accuracy',
+        monitor='val_accuracy',
         verbose=1, save_best_only=True)
 
     # model.fit(train_dataset, epochs=20, callbacks=[checkpoint])

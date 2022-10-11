@@ -1,7 +1,8 @@
 import os
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'   # see issue #152
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+
 import math
 import glob
 
@@ -12,6 +13,13 @@ import tensorflow_addons as tfa
 
 from UNet2D import unet
 
+import wandb
+from wandb.keras import WandbCallback
+wandb.login()
+
+wandb.init(project='RetinaGAN-downstream',
+           group='segmentation',
+           job_type=f'fake')
 
 
 fake_data_root = '/vol/medic01/users/bh1511/PyCharm_Deployment/dr_MICCAI2022/pipeline/fake_dataset/'
@@ -74,7 +82,8 @@ def random_rotate(image, label):
 def normalize(image, label):
     # normalizing the images to [-1, 1]
     image = tf.image.convert_image_dtype(image, tf.float32)
-    label = tf.one_hot(label[..., 0], depth=7)  # , dtype=tf.uint8)
+    # label = tf.one_hot(label[..., 0], depth=7)  # , dtype=tf.uint8)
+    label = label[..., 0][..., None]
     return image, label
 
 
@@ -119,32 +128,55 @@ train_dataset = train_dataset.batch(4)
 
 valid_dataset = tf.data.Dataset.from_tensor_slices((test_df['image'], test_df['label']))
 valid_dataset = valid_dataset.map(load_image_test)
-valid_dataset = valid_dataset.batch(1)
-
-# Create a MirroredStrategy.
-strategy = tf.distribute.MirroredStrategy()
-print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
-
-# Open a strategy scope.
-with strategy.scope():
-    # Everything that creates variables should be under the strategy scope.
-    # In general this is only model construction & `compile()`.
-
-    model = unet(num_classes=7, activation='softmax')
+valid_dataset = valid_dataset.batch(2)
 
 
-    csv_logger = tf.keras.callbacks.CSVLogger(f'checkpoints/segmentation/unet_fake.log')
-    checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=f'checkpoints/segmentation/unet_fake.tf',
-        monitor='val_accuracy', verbose=1,
-        save_best_only=True)
+def dice_coef(y_true, y_pred, num_classes=7, smooth=1e-7):
+    '''
+    Dice coefficient for 7 categories. Ignores background pixel label 0 and VB label 6
+    Pass to model as metric during compile statement
+    '''
+    y_true_f = tf.keras.backend.flatten(tf.one_hot(tf.cast(y_true, tf.int32), depth=num_classes)[..., 1:-1])
+    y_pred_f = tf.keras.backend.flatten(y_pred[..., 1:-1])
+    intersect = tf.keras.backend.sum(y_true_f * y_pred_f)
+    denom = tf.keras.backend.sum(y_true_f + y_pred_f)
+    return tf.keras.backend.mean((2. * intersect / (denom + smooth)))
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr=1e-4),
-                  loss='binary_crossentropy',
-                  metrics=['accuracy'])
+def dice_coef_loss(y_true, y_pred):
+    '''
+    Dice loss to minimize. Pass to model as loss during compile statement
+    '''
+    return 1 - dice_coef(y_true, y_pred)
+
+def combined_loss(y_true, y_pred, alpha=0.5):
+    sBCE = tf.keras.losses.SparseCategoricalCrossentropy()
+    return (1 - alpha) * sBCE(y_true, y_pred) + alpha * dice_coef_loss(y_true, y_pred)
+
+
+# # Create a MirroredStrategy.
+# strategy = tf.distribute.MirroredStrategy()
+# print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+#
+# # Open a strategy scope.
+# with strategy.scope():
+#     # Everything that creates variables should be under the strategy scope.
+#     # In general this is only model construction & `compile()`.
+
+model = unet(num_classes=7, activation='softmax')
+
+
+csv_logger = tf.keras.callbacks.CSVLogger(f'checkpoints/segmentation/unet_fake.log')
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    filepath=f'checkpoints/segmentation/unet_fake.tf',
+    monitor='val_dice_coef', mode='max', verbose=1,
+    save_best_only=True)
+
+model.compile(optimizer=tf.keras.optimizers.Adam(lr=1e-4),
+              loss=combined_loss,
+              metrics=[dice_coef])
 
 model.fit(train_dataset,
           validation_data=valid_dataset,
           epochs=100,
-          callbacks=[checkpoint, csv_logger]
+          callbacks=[checkpoint, csv_logger, WandbCallback()]
           )
