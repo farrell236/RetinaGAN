@@ -1,7 +1,7 @@
 import math
 import os
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'   # see issue #152
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -11,12 +11,12 @@ from patient_ids import patient_ids
 from models.gaugan import GauGAN
 
 BATCH_SIZE = 4
-IMG_HEIGHT = IMG_WIDTH = 512
+IMG_HEIGHT = IMG_WIDTH = 1024
 NUM_CLASSES = 7
 AUTOTUNE = tf.data.AUTOTUNE
 
 
-root_dir = '/data/datasets/retina/FGADR/Seg-set/'
+root_dir = '/vol/biomedic3/bh1511/retina/FGADR/Seg-set/'
 
 
 def load(image_file):
@@ -147,12 +147,12 @@ class GanMonitor(tf.keras.callbacks.Callback):
 
 
 ckpt_cb = tf.keras.callbacks.ModelCheckpoint(
-    f'checkpoints/gaugan_512x512.ckpt',
+    f'checkpoints/gaugan_bs8/gaugan_1024x1024.ckpt',
     save_weights_only=True,
     verbose=0,
 )
 
-gaugan = GauGAN(IMG_HEIGHT, NUM_CLASSES, BATCH_SIZE, latent_dim=256)
+gaugan = GauGAN(IMG_HEIGHT, NUM_CLASSES, BATCH_SIZE, latent_dim=512)
 gaugan.compile()
 gaugan.fit(
     train_dataset,

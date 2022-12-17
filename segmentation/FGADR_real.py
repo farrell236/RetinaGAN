@@ -163,11 +163,11 @@ def combined_loss(y_true, y_pred, alpha=0.5):
 #     # In general this is only model construction & `compile()`.
 
 # model = unet(num_classes=7, activation='softmax')
-model = tf.keras.models.load_model('checkpoints/segmentation/unet_fine.tf', compile=False)
+model = tf.keras.models.load_model('checkpoints/segmentation/unet_fake.tf', compile=False)
 
-csv_logger = tf.keras.callbacks.CSVLogger(f'checkpoints/segmentation/unet_fine2.log')
+csv_logger = tf.keras.callbacks.CSVLogger(f'checkpoints/segmentation/unet_fine.log')
 checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    filepath=f'checkpoints/segmentation/unet_fine2.tf',
+    filepath=f'checkpoints/segmentation/unet_fine.tf',
     monitor='val_dice_coef', mode='max', verbose=1,
     save_best_only=True)
 

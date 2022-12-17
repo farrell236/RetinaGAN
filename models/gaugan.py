@@ -109,6 +109,8 @@ def build_encoder(image_shape, encoder_downsample_factor=64, latent_dim=256):
     x = downsample(4 * encoder_downsample_factor, 3)(x)
     x = downsample(8 * encoder_downsample_factor, 3)(x)
     x = downsample(8 * encoder_downsample_factor, 3)(x)
+    x = downsample(8 * encoder_downsample_factor, 3)(x)
+    x = downsample(16 * encoder_downsample_factor, 3)(x)
     x = tf.keras.layers.Flatten()(x)
     mean = tf.keras.layers.Dense(latent_dim, name="mean")(x)
     variance = tf.keras.layers.Dense(latent_dim, name="variance")(x)
@@ -134,8 +136,8 @@ def build_generator(mask_shape, latent_dim=256):
     x = tf.keras.layers.UpSampling2D((2, 2))(x)
     x = ResBlock(filters=64)(x, mask)               # These 2 added layers
     x = tf.keras.layers.UpSampling2D((2, 2))(x)     # to make input 512x512
-    # x = ResBlock(filters=32)(x, mask)               # These 2 added layers
-    # x = tf.keras.layers.UpSampling2D((2, 2))(x)     # to make input 1024x1024
+    x = ResBlock(filters=32)(x, mask)               # These 2 added layers
+    x = tf.keras.layers.UpSampling2D((2, 2))(x)     # to make input 1024x1024
     x = tf.nn.leaky_relu(x, 0.2)
     output_image = tf.nn.sigmoid(tf.keras.layers.Conv2D(3, 4, padding="same")(x))
     return tf.keras.Model([latent, mask], output_image, name="generator")
@@ -148,9 +150,12 @@ def build_discriminator(image_shape, downsample_factor=64):
     x1 = downsample(downsample_factor, 4, apply_norm=False)(x)
     x2 = downsample(2 * downsample_factor, 4)(x1)
     x3 = downsample(4 * downsample_factor, 4)(x2)
-    x4 = downsample(8 * downsample_factor, 4, strides=1)(x3)
-    x5 = tf.keras.layers.Conv2D(1, 4)(x4)
-    outputs = [x1, x2, x3, x4, x5]
+    x4 = downsample(8 * downsample_factor, 4)(x3)
+    x5 = downsample(8 * downsample_factor, 4)(x4)
+    x6 = downsample(8 * downsample_factor, 4)(x5)
+    x7 = downsample(16 * downsample_factor, 4)(x6)
+    x8 = tf.keras.layers.Conv2D(1, 4)(x7)
+    outputs = [x1, x2, x3, x4, x5, x6, x7, x8]
     return tf.keras.Model([input_image_A, input_image_B], outputs)
 
 
@@ -236,8 +241,8 @@ class GauGAN(tf.keras.Model):
         self.kl_divergence_loss_coeff = kl_divergence_loss_coeff
 
         self.discriminator = build_discriminator(self.image_shape)
-        self.generator = build_generator(self.mask_shape)
-        self.encoder = build_encoder(self.image_shape)
+        self.generator = build_generator(self.mask_shape, latent_dim=latent_dim)
+        self.encoder = build_encoder(self.image_shape, latent_dim=latent_dim)
         self.sampler = GaussianSampler(batch_size, latent_dim)
         self.patch_size, self.combined_model = self.build_combined_generator()
 
@@ -325,9 +330,7 @@ class GauGAN(tf.keras.Model):
             g_loss = generator_loss(pred)
             kl_loss = self.kl_divergence_loss_coeff * kl_divergence_loss(mean, variance)
             vgg_loss = self.vgg_feature_loss_coeff * self.vgg_loss(image, fake_image)
-            feature_loss = self.feature_loss_coeff * self.feature_matching_loss(
-                real_d_output, fake_d_output
-            )
+            feature_loss = self.feature_loss_coeff * self.feature_matching_loss(real_d_output, fake_d_output)
             total_loss = g_loss + kl_loss + vgg_loss + feature_loss
 
         gradients = tape.gradient(total_loss, self.combined_model.trainable_variables)

@@ -15,7 +15,7 @@ import tensorflow_addons as tfa
 from patient_ids import patient_ids
 
 
-root_dir = '/data/datasets/retina/FGADR/Seg-set/'
+root_dir = '/vol/biomedic3/bh1511/retina/FGADR/Seg-set/'
 
 data_df = pd.read_csv(os.path.join(root_dir, 'DR_Seg_Grading_Label.csv'), names=['image', 'DR_grade'])
 
@@ -38,6 +38,7 @@ def parse_function(filename, label):
 
     # This will convert to float values in [0, 1]
     image = tf.image.convert_image_dtype(image, tf.float32)
+    # label = tf.one_hot(label, depth=5)
 
     return image, label
 
@@ -80,27 +81,34 @@ valid_dataset = valid_dataset.batch(8)
 
 ##### Network Definition ###############################################################################################
 
-from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, classification_report
+from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, jaccard_score, confusion_matrix, ConfusionMatrixDisplay
 
-# model = tf.keras.models.load_model('CI/InceptionResNetV2_0_real.tf', compile=False)
-# model = tf.keras.models.load_model('CI/InceptionResNetV2_0_fake.tf', compile=False)
-model = tf.keras.models.load_model('CI/InceptionResNetV2_0_fine.tf', compile=False)
+
+model = tf.keras.models.load_model('dataset_padding/base.tf', compile=False)
+# model = tf.keras.models.load_model('dataset_padding/undersample.tf', compile=False)
+# model = tf.keras.models.load_model('dataset_padding/oversample.tf', compile=False)
+# model = tf.keras.models.load_model('dataset_padding/padding.tf', compile=False)
 
 a=1
 
 y_pred_all = []
 y_true_all = []
 for image, label in tqdm.tqdm(valid_dataset):
-    y_pred_all.append(tf.nn.softmax(model(image), axis=-1))
+    y_pred_all.append(model(image))
     y_true_all.append(label)
 y_true_all = np.concatenate(y_true_all)
 y_pred_all = np.concatenate(y_pred_all)
 y_pred_all = np.argmax(y_pred_all, axis=-1)
 
 print(accuracy_score(y_true_all, y_pred_all))
-print(precision_score(y_true_all, y_pred_all, average="macro"))
-print(recall_score(y_true_all, y_pred_all, average="macro"))
-print(f1_score(y_true_all, y_pred_all, average="macro"))
+print(precision_score(y_true_all, y_pred_all, average='weighted'))
+print(recall_score(y_true_all, y_pred_all, average='weighted'))
+print(f1_score(y_true_all, y_pred_all, average='weighted'))
+print(jaccard_score(y_true_all, y_pred_all, average='weighted'))
+
+cm = confusion_matrix(y_true_all, y_pred_all)
+cm_display = ConfusionMatrixDisplay(confusion_matrix=cm)
+# cm_display.plot().figure_.savefig('padding.png')
 
 # classification_report(y_true_all, y_pred_all)
 

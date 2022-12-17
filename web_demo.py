@@ -23,8 +23,8 @@ def load_cstylegan():
 
 @st.cache(allow_output_mutation=True)
 def load_gaugan(batch_size):
-    gaugan = GauGAN(image_size=512, num_classes=7, batch_size=batch_size, latent_dim=256)
-    gaugan.load_weights('checkpoints/gaugan/gaugan_512x512.ckpt')
+    gaugan = GauGAN(image_size=1024, num_classes=7, batch_size=batch_size, latent_dim=512)
+    gaugan.load_weights('checkpoints/gaugan/gaugan_1024x1024.ckpt').expect_partial()
     print('GauGAN Model Loaded!')
     return gaugan
 
@@ -36,7 +36,6 @@ def set_seed():
 def main():
 
     st.title('RetinaGAN')
-    # st.text('Made with Streamlit and Attention RNN')
 
     st.sidebar.columns([1, 5, 1])[1].image(cv2.cvtColor(cv2.imread('assets/sample.jpeg'), cv2.COLOR_BGR2RGB))
 
@@ -47,9 +46,9 @@ def main():
         st.write('Online Demo for **High-Fidelity Diabetic Retina Fundus Image Synthesis from Freestyle Lesion Maps**.')
 
         st.write('''        
-        Paper: https://arxiv.org/abs/xxxx.xxxxx
+        Paper: LINK_TBD
         
-        Github: http://github.com/xxxxx/RetinaGAN
+        Github: http://github.com/farrell236/RetinaGAN
         
         👈 Select an Option From the drop down menu
 
@@ -61,8 +60,8 @@ def main():
         Fundus images based on artificially generated or free-hand drawn semantic lesion maps.
         ''')
 
-        st.columns([1, 5, 1])[1].image(cv2.cvtColor(cv2.imread('assets/cStyleGAN.png'), cv2.COLOR_BGR2RGB),
-                                       caption='Conditional StyleGAN Model')
+        st.columns([1, 5, 1])[1].image(cv2.cvtColor(cv2.imread('assets/RetinaGAN_pipeline.png'), cv2.COLOR_BGR2RGB),
+                                       caption='RetinaGAN Pipeline')
 
         st.write('''
         StyleGAN is modified to be conditional in to synthesize pathological lesion maps 
@@ -73,14 +72,17 @@ def main():
         seven channels instead of class colors to avoid ambiguity.
         ''')
 
-        st.columns([1, 5, 1])[1].image(cv2.cvtColor(cv2.imread('assets/GauGAN.png'), cv2.COLOR_BGR2RGB),
-                                       caption='SPADE Model')
+        st.columns([1, 5, 1])[1].image(cv2.cvtColor(cv2.imread('assets/cStyleGAN.png'), cv2.COLOR_BGR2RGB),
+                                       caption='Conditional StyleGAN Model')
 
         st.write('''
-        The generated label maps are then passed through SPADE, an image-to-image translation network, 
+        The generated label maps are then passed through GauGAN, an image-to-image translation network, 
         to turn them into photo-realistic retina fundus images. The input to the network are one-hot 
         encoded labels.
         ''')
+
+        st.columns([1, 5, 1])[1].image(cv2.cvtColor(cv2.imread('assets/GauGAN.png'), cv2.COLOR_BGR2RGB),
+                                       caption='GauGAN Model')
 
 
     elif options == 'Random':
@@ -100,12 +102,12 @@ def main():
 
             labels = tf.keras.backend.softmax(labels)
             labels = tf.cast(labels > 0.5, dtype=tf.float32)
-            labels = tf.image.resize(labels, (512, 512), method='nearest')
+            labels = tf.image.resize(labels, (1024, 1024), method='nearest')
 
             fixed_labels = fix_pred_label(labels)
             fixed_labels = tf.tile(fixed_labels, (4, 1, 1, 1))
 
-            latent_vector = tf.random.normal(shape=(4, 256), mean=0.0, stddev=2.0)
+            latent_vector = tf.random.normal(shape=(4, 512), mean=0.0, stddev=2.0)
             fake_image = gaugan.predict([latent_vector, fixed_labels])
 
             with col:
@@ -140,15 +142,15 @@ def main():
                 st.info('Mask Contains invalid Class Colours')
                 return
 
-            # Resize image with padding to [512, 512, 3]
-            img_array = tf.image.resize_with_pad(img_array, 512, 512, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            # Resize image with padding to [1024, 1024, 3]
+            img_array = tf.image.resize_with_pad(img_array, 1024, 1024, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
             # Display input image
             with col1:
                 st.image(img_array.numpy(), caption='Uploaded Image')
 
             img_label = rgb_to_onehot(img_array.numpy(), color_dict)[None, ...]
-            latent_vector = tf.random.normal(shape=(1, 256), mean=0.0, stddev=2.0)
+            latent_vector = tf.random.normal(shape=(1, 512), mean=0.0, stddev=2.0)
             fake_image = gaugan.predict([latent_vector, img_label])[0]
 
             with col2:
@@ -166,7 +168,7 @@ def main():
                  'into the Vitreous Body and upload it to the model. '
                  'NB: Images must be stored as lossless PNGs')
 
-        template = np.uint8(cv2.circle(np.zeros((512, 512, 3)), [256, 256], 256, (255, 255, 255), -1))
+        template = np.uint8(cv2.circle(np.zeros((1024, 1024, 3)), [512, 512], 512, (255, 255, 255), -1))
         st.columns([1, 5, 1])[1].image(template, use_column_width=True, output_format='PNG')
 
         st.header('Class Colours')
@@ -202,7 +204,7 @@ def main():
 
 if __name__ == '__main__':
 
-    tf.config.set_visible_devices([], 'GPU')
+    # tf.config.set_visible_devices([], 'GPU')
 
     main()
 

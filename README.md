@@ -1,18 +1,21 @@
 # RetinaGAN
 
-Code Repository for **High-Fidelity Diabetic Retina Fundus Image Synthesis from Freestyle Lesion Maps** ([arXiv](https://arxiv.org/abs/xxxx.xxxxx)).
+Code Repository for [**High-Fidelity Diabetic Retina Fundus Image Synthesis from Freestyle Lesion Maps**]().
 
 ## About
 
 RetinaGAN a two-step process for generating photo-realistic retinal Fundus images based on artificially generated or free-hand drawn semantic lesion maps.
 
-![Conditional StyleGAN](assets/cStyleGAN.png)
+![RetinaGAN Pipeline](assets/RetinaGAN_pipeline.png)
+
 
 StyleGAN is modified to be conditional in to synthesize pathological lesion maps based on a specified DR grade (i.e., grades 0 to 4). The DR Grades are defined by the International Clinical Diabetic Retinopathy (ICDR) disease severity scale; no apparent retinopathy, {mild, moderate, severe} Non-Proliferative Diabetic Retinopathy (NPDR), and Proliferative Diabetic Retinopathy (PDR). The output of the network is a binary image with seven channels instead of class colors to avoid ambiguity.
 
-![SPADE](assets/GauGAN.png)
+![Conditional StyleGAN](assets/cStyleGAN.png)
 
 The generated label maps are then passed through SPADE, an image-to-image translation network, to turn them into photo-realistic retina fundus images. The input to the network are one-hot encoded labels.
+
+![SPADE](assets/GauGAN.png)
 
 ## Usage
 

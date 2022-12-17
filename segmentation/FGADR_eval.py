@@ -64,7 +64,7 @@ test_dataset = test_dataset.batch(1)
 
 # model = tf.keras.models.load_model('checkpoints/segmentation/unet_real.tf', compile=False)
 # model = tf.keras.models.load_model('checkpoints/segmentation/unet_fake.tf', compile=False)
-model = tf.keras.models.load_model('checkpoints/segmentation/unet_fine2.tf', compile=False)
+model = tf.keras.models.load_model('checkpoints/segmentation/unet_fine.tf', compile=False)
 
 
 def dice_coef(y_true, y_pred, eps=1e-5):
